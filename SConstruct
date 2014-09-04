@@ -298,7 +298,7 @@ options.Add(
 options.Add(
 	"CORTEX_SRC_DIR",
 	"The location of the cortex source to be used if BUILD_DEPENDENCY_CORTEX is specified.",
-	"$DEPENDENCIES_SRC_DIR/cortex-9.0.0-a3",
+	"$DEPENDENCIES_SRC_DIR/cortex-9.0.0-a5",
 )
 
 options.Add(
@@ -493,7 +493,7 @@ env = Environment(
 	options = options,
 
 	GAFFER_MAJOR_VERSION = "0",
-	GAFFER_MINOR_VERSION = "100",
+	GAFFER_MINOR_VERSION = "101",
 	GAFFER_PATCH_VERSION = "0",
 
 )
