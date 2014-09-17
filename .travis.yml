@@ -1,0 +1,14 @@
+language: cpp
+
+before_install:
+    - sudo apt-get update -qq
+    - sudo apt-get install -qq inkscape
+    - sudo apt-get install -qq doxygen
+
+install: python ./config/travis/installDependencies.py
+
+script: scons build CXX=$CXX ENV_VARS_TO_IMPORT=PATH
+
+compiler:
+    - gcc
+    - clang
