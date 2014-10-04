@@ -50,7 +50,7 @@ import subprocess
 
 gafferMilestoneVersion = 0 # for announcing major milestones - may contain all of the below
 gafferMajorVersion = 1 # backwards-incompatible changes
-gafferMinorVersion = 0 # new backwards-compatible features
+gafferMinorVersion = 1 # new backwards-compatible features
 gafferPatchVersion = 0 # bug fixes
 
 # All of the following must be considered when determining
@@ -1573,7 +1573,7 @@ def installer( target, source, env ) :
 					else:
 						shutil.copy2( srcName, dstName )
 
-	regex = re.compile( "|".join( [ fnmatch.translate( env.subst( "$BUILD_DIR/" + m ) ) for m in env["MANIFEST"] ] ) )
+	regex = re.compile( "|".join( [ fnmatch.translate( os.path.normpath( env.subst( "$BUILD_DIR/" + m ) ) ) for m in env["MANIFEST"] ] ) )
 	copyTree( str( source[0] ), str( target[0] ), regex )
 
 if env.subst( "$PACKAGE_FILE" ).endswith( ".dmg" ) :
