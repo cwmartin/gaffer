@@ -38,9 +38,31 @@
 
 #include "GafferBindings/NodeBinding.h"
 
-#include "GafferSceneUI/SceneView.h"
+#include "GafferUIBindings/GadgetBinding.h"
 
+#include "GafferSceneUI/SceneView.h"
+#include "GafferSceneUI/SceneGadget.h"
+#include "GafferSceneUI/SelectionTool.h"
+#include "GafferSceneUI/CropWindowTool.h"
+
+using namespace boost::python;
+using namespace IECorePython;
 using namespace GafferSceneUI;
+
+namespace
+{
+
+IECore::InternedStringVectorDataPtr objectAt( SceneGadget &g, IECore::LineSegment3f &l )
+{
+	IECore::InternedStringVectorDataPtr result = new IECore::InternedStringVectorData;
+	if( g.objectAt( l, result->writable() ) )
+	{
+		return result;
+	}
+	return NULL;
+}
+
+} // namespace
 
 BOOST_PYTHON_MODULE( _GafferSceneUI )
 {
@@ -49,5 +71,26 @@ BOOST_PYTHON_MODULE( _GafferSceneUI )
 		.def( "expandSelection", &SceneView::expandSelection, ( boost::python::arg_( "depth" ) = 1 ) )
 		.def( "collapseSelection", &SceneView::collapseSelection )
 	;
+
+	GafferUIBindings::GadgetClass<SceneGadget>()
+		.def( init<>() )
+		.def( "setScene", &SceneGadget::setScene )
+		.def( "getScene", &SceneGadget::getScene, return_value_policy<CastToIntrusivePtr>() )
+		.def( "setContext", &SceneGadget::setContext )
+		.def( "getContext", (Gaffer::Context *(SceneGadget::*)())&SceneGadget::getContext, return_value_policy<CastToIntrusivePtr>() )
+		.def( "setExpandedPaths", &SceneGadget::setExpandedPaths )
+		.def( "getExpandedPaths", &SceneGadget::getExpandedPaths, return_value_policy<CastToIntrusivePtr>() )
+		.def( "setMinimumExpansionDepth", &SceneGadget::setMinimumExpansionDepth )
+		.def( "getMinimumExpansionDepth", &SceneGadget::getMinimumExpansionDepth )
+		.def( "baseState", &SceneGadget::baseState, return_value_policy<CastToIntrusivePtr>() )
+		.def( "objectAt", &objectAt )
+		.def( "objectsAt", &SceneGadget::objectsAt )
+		.def( "setSelection", &SceneGadget::setSelection )
+		.def( "getSelection", &SceneGadget::getSelection, return_value_policy<CastToIntrusivePtr>() )
+		.def( "selectionBound", &SceneGadget::selectionBound )
+	;
+
+	GafferBindings::NodeClass<SelectionTool>( NULL, no_init );
+	GafferBindings::NodeClass<CropWindowTool>( NULL, no_init );
 
 }

@@ -49,8 +49,8 @@ import subprocess
 ###############################################################################################
 
 gafferMilestoneVersion = 0 # for announcing major milestones - may contain all of the below
-gafferMajorVersion = 1 # backwards-incompatible changes
-gafferMinorVersion = 1 # new backwards-compatible features
+gafferMajorVersion = 6 # backwards-incompatible changes
+gafferMinorVersion = 0 # new backwards-compatible features
 gafferPatchVersion = 0 # bug fixes
 
 # All of the following must be considered when determining
@@ -88,9 +88,9 @@ options.Add(
 )
 
 options.Add(
-        "LINKFLAGS",
-        "The extra flags to pass to the C++ linker during compilation.",
-        "",
+	"LINKFLAGS",
+	"The extra flags to pass to the C++ linker during compilation.",
+	"",
 )
 
 options.Add(
@@ -319,7 +319,7 @@ options.Add(
 options.Add(
 	"CORTEX_SRC_DIR",
 	"The location of the cortex source to be used if BUILD_DEPENDENCY_CORTEX is specified.",
-	"$DEPENDENCIES_SRC_DIR/cortex-9.0.0-a6",
+	"$DEPENDENCIES_SRC_DIR/cortex-9.0.0-a10",
 )
 
 options.Add(
@@ -343,6 +343,24 @@ options.Add(
 options.Add(
 	"ARNOLD_ROOT",
 	"The directory in which Arnold is installed. Used to build GafferArnold",
+	"",
+)
+
+options.Add(
+	"APPLESEED_INCLUDE_PATH",
+	"The path to the appleseed include directory. Used to build Gafferseed",
+	"",
+)
+
+options.Add(
+	"APPLESEED_LIB_PATH",
+	"The path to the appleseed lib directory. Used to build Gafferseed",
+	"",
+)
+
+options.Add(
+	"APPLESEED_BIN_PATH",
+	"The path to the appleseed bin directory. Used to build Gafferseed",
 	"",
 )
 
@@ -494,15 +512,15 @@ options.Add(
 )
 
 options.Add(
-       "DOXYGEN",
-       "Where to find the doxygen binary",
-       "doxygen",
+	"DOXYGEN",
+	"Where to find the doxygen binary",
+	"doxygen",
 )
 
 options.Add(
-       "INKSCAPE",
-       "Where to find the inkscape binary",
-       "inkscape",
+	"INKSCAPE",
+	"Where to find the inkscape binary",
+	"inkscape",
 )
 
 ###############################################################################################
@@ -939,6 +957,23 @@ libraries = {
 
 	"GafferUITest" : {},
 
+	"GafferCortex" : {
+		"envAppends" : {
+			"LIBS" : [ "Gaffer" ],
+		},
+		"pythonEnvAppends" : {
+			"LIBS" : [ "GafferBindings", "GafferCortex" ],
+		},
+	},
+
+	"GafferCortexTest" : {
+		"additionalFiles" : glob.glob( "python/GafferTest/*/*" ) + glob.glob( "python/GafferCortexTest/*/*/*" ),
+	},
+
+	"GafferCortexUI" : {},
+
+	"GafferCortexUITest" : {},
+
 	"GafferScene" : {
 		"envAppends" : {
 			"LIBS" : [ "Gaffer", "Iex$OPENEXR_LIB_SUFFIX", "IECoreGL$CORTEX_LIB_SUFFIX", "IECoreAlembic$CORTEX_LIB_SUFFIX", "GafferImage" ],
@@ -967,7 +1002,7 @@ libraries = {
 			"LIBS" : [ "Gaffer", "GafferUI", "GafferScene", "IECoreGL$CORTEX_LIB_SUFFIX", "GLEW$GLEW_LIB_SUFFIX" ],
 		},
 		"pythonEnvAppends" : {
-			"LIBS" : [ "GafferUI", "GafferSceneUI" ],
+			"LIBS" : [ "IECoreGL$CORTEX_LIB_SUFFIX", "GafferScene", "GafferUI", "GafferSceneUI" ],
 		},
 	},
 
@@ -1061,6 +1096,24 @@ libraries = {
 		"additionalFiles" : glob.glob( "python/GafferOSLTest/*/*" ),
 		"requiredOptions" : [ "OSL_SRC_DIR" ],
 	},
+
+	"GafferAppleseed" : {
+		"envAppends" : {
+			"CPPPATH" : [ "$APPLESEED_INCLUDE_PATH" ],
+			"LIBPATH" : [ "$APPLESEED_LIB_PATH" ],
+			"LIBS" : [ "Gaffer", "GafferScene", "appleseed", "IECoreAppleseed$CORTEX_LIB_SUFFIX" ],
+		},
+		"pythonEnvAppends" : {
+			"CPPPATH" : [ "$APPLESEED_INCLUDE_PATH" ],
+			"LIBPATH" : [ "$APPLESEED_LIB_PATH" ],
+			"LIBS" : [ "Gaffer", "GafferScene", "GafferBindings", "GafferAppleseed" ],
+		},
+		"requiredOptions" : [ "APPLESEED_INCLUDE_PATH", "APPLESEED_LIB_PATH", "APPLESEED_BIN_PATH" ],
+	},
+
+	"GafferAppleseedTest" : {},
+
+	"GafferAppleseedUI" : {},
 
 	"apps" : {
 		"additionalFiles" : glob.glob( "apps/*/*-1.py" ),
@@ -1528,6 +1581,7 @@ dependenciesManifest = [
 
 	"renderMan",
 	"arnold",
+	"appleseed",
 
 ]
 

@@ -145,6 +145,16 @@ class PlugValueWidget( GafferUI.Widget ) :
 
 		return result
 
+	## Because Plugs may have child Plugs, so too PlugValueWidgets may
+	# have child PlugValueWidgets to represent the children of their plug.
+	# This method should be reimplemented to return such children. Because
+	# UIs may be built lazily on demand, the lazy flag is provided to
+	# determine whether or not the query should force a build in the case
+	# that one has not been performed yet.
+	def childPlugValueWidget( self, childPlug, lazy=True ) :
+
+		return None
+
 	## Must be implemented by subclasses so that the widget reflects the current
 	# status of the plug. To temporarily suspend calls to this function, use
 	# Gaffer.BlockedConnection( self._plugConnections() ).
@@ -221,6 +231,26 @@ class PlugValueWidget( GafferUI.Widget ) :
 				}
 			)
 
+		if Gaffer.NodeAlgo.hasUserDefault( self.getPlug() ) and self.getPlug().direction() == Gaffer.Plug.Direction.In :
+			menuDefinition.append(
+				"/User Default", {
+					"command" : Gaffer.WeakMethod( self.__applyUserDefault ),
+					"active" : self._editable()
+				}
+			)
+		
+		with self.getContext() :
+			currentPreset = Gaffer.NodeAlgo.currentPreset( self.getPlug() )
+		
+		for presetName in Gaffer.NodeAlgo.presets( self.getPlug() ) :
+			menuDefinition.append(
+				"/Preset/" + presetName, {
+					"command" : IECore.curry( Gaffer.WeakMethod( self.__applyPreset ), presetName ),
+					"active" : self._editable(),
+					"checkBox" : presetName == currentPreset,
+				}
+			)
+		
 		self.popupMenuSignal()( menuDefinition, self )
 
 		return menuDefinition
@@ -422,6 +452,16 @@ class PlugValueWidget( GafferUI.Widget ) :
 
 		with Gaffer.UndoContext( self.getPlug().ancestor( Gaffer.ScriptNode.staticTypeId() ) ) :
 			self.getPlug().setInput( None )
+
+	def __applyUserDefault( self ) :
+
+		with Gaffer.UndoContext( self.getPlug().ancestor( Gaffer.ScriptNode.staticTypeId() ) ) :
+			Gaffer.NodeAlgo.applyUserDefault( self.getPlug() )
+
+	def __applyPreset( self, presetName, *unused ) :
+	
+		with Gaffer.UndoContext( self.getPlug().ancestor( Gaffer.ScriptNode.staticTypeId() ) ) :
+			Gaffer.NodeAlgo.applyPreset( self.getPlug(), presetName )					
 
 	# drag and drop stuff
 

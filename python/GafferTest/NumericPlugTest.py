@@ -427,6 +427,47 @@ class NumericPlugTest( GafferTest.TestCase ) :
 		self.assertEqual( i.getValue(), 1 )
 		self.assertEqual( f.getValue(), 1 )
 
+	def testIntermediateConversions( self ) :
+	
+		f1 = Gaffer.FloatPlug()
+		i = Gaffer.IntPlug()
+		f2 = Gaffer.FloatPlug()
+		
+		i.setInput( f1 )
+		f2.setInput( i )
+		
+		f1.setValue( 10.2 )
+		self.assertEqual( f2.getValue(), 10 )
+		
+		f1.setValue( 100.8 )
+		self.assertEqual( f2.getValue(), 100 )
+
+	def testNoChildrenAccepted( self ) :
+
+		p1 = Gaffer.IntPlug()
+		p2 = Gaffer.IntPlug()
+
+		self.assertFalse( p1.acceptsChild( p2 ) )
+		self.assertRaises( RuntimeError, p1.addChild, p2 )
+
+	def testPrecomputedHash( self ) :
+
+		n = GafferTest.AddNode()
+		n["op1"].setValue( 10 )
+		n["op2"].setValue( 20 )
+
+		self.assertEqual( n["sum"].getValue(), 30 )
+		self.assertEqual( n.numHashCalls, 1 )
+		self.assertEqual( n.numComputeCalls, 1 )
+
+		h = n["sum"].hash()
+		self.assertEqual( n.numHashCalls, 2 )
+		self.assertEqual( n.numComputeCalls, 1 )
+
+		self.assertEqual( n["sum"].getValue( _precomputedHash = h ), 30 )
+		self.assertEqual( n.numHashCalls, 2 )
+		self.assertEqual( n.numComputeCalls, 1 )
+
 if __name__ == "__main__":
 	unittest.main()
 

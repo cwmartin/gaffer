@@ -35,6 +35,7 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
+#include "boost/algorithm/string/predicate.hpp"
 #include "boost/lexical_cast.hpp"
 #include "boost/bind.hpp"
 
@@ -330,7 +331,7 @@ IECore::Shader *Shader::NetworkBuilder::shader( const Shader *shaderNode )
 
 	shaderAndHash.shader = new IECore::Shader( shaderNode->namePlug()->getValue(), shaderNode->typePlug()->getValue() );
 
-	parameterValueWalk( shaderNode, shaderNode->parametersPlug(), "", shaderAndHash.shader->parameters() );
+	parameterValueWalk( shaderNode, shaderNode->parametersPlug(), IECore::InternedString(), shaderAndHash.shader->parameters() );
 
 	shaderAndHash.shader->blindData()->writable()["gaffer:nodeName"] = new IECore::StringData( shaderNode->nodeNamePlug()->getValue() );
 
@@ -338,18 +339,18 @@ IECore::Shader *Shader::NetworkBuilder::shader( const Shader *shaderNode )
 	return shaderAndHash.shader.get();
 }
 
-void Shader::NetworkBuilder::parameterValueWalk( const Shader *shaderNode, const Gaffer::Plug *parameterPlug, const std::string &parameterName, IECore::CompoundDataMap &values )
+void Shader::NetworkBuilder::parameterValueWalk( const Shader *shaderNode, const Gaffer::Plug *parameterPlug, const IECore::InternedString &parameterName, IECore::CompoundDataMap &values )
 {
 	for( InputPlugIterator it( parameterPlug ); it != it.end(); ++it )
 	{
-		std::string childParameterName;
-		if( parameterName.size() )
+		IECore::InternedString childParameterName;
+		if( parameterName.string().size() )
 		{
-			childParameterName = parameterName + "." + (*it)->getName().string();
+			childParameterName = parameterName.string() + "." + (*it)->getName().string();
 		}
 		else
 		{
-			childParameterName = (*it)->getName().string();
+			childParameterName = (*it)->getName();
 		}
 
 		if( (*it)->typeId() == CompoundPlug::staticTypeId() )
@@ -378,7 +379,23 @@ const std::string &Shader::NetworkBuilder::shaderHandle( const Shader *shaderNod
 	IECore::StringDataPtr handleData = s->parametersData()->member<IECore::StringData>( "__handle" );
 	if( !handleData )
 	{
-		s->setType( "shader" );
+		// Some renderers (Arnold for one) allow surface shaders to be connected
+		// as inputs to other shaders, so we may need to change the shader type to
+		// convert it into a standard shader. We must take care to preserve any
+		// renderer specific prefix when doing this.
+		const std::string &type = s->getType();
+		if( !boost::ends_with( type, "shader" ) )
+		{
+			size_t i = type.find_first_of( ":" );
+			if( i != std::string::npos )
+			{
+				s->setType( type.substr( 0, i + 1 ) + "shader" );
+			}
+			else
+			{
+				s->setType( "shader" );
+			}
+		}
 		// the handle includes the node name so as to help with debugging, but also
 		// includes an integer unique to this shader group, as two shaders could have
 		// the same name if they don't have the same parent - because one is inside a

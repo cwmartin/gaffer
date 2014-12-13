@@ -418,6 +418,100 @@ class ReferenceTest( GafferTest.TestCase ) :
 
 		self.assertTrue( "a" in s3["r"] )
 		self.assertTrue( isinstance( s3["r"]["a"], GafferTest.AddNode ) )
+	
+	def testDependencyNode( self ) :
+
+		s = Gaffer.ScriptNode()
+
+		# Make a reference, and check it's a DependencyNode
+
+		s["r"] = Gaffer.Reference()
+		self.assertTrue( isinstance( s["r"], Gaffer.DependencyNode ) )
+		self.assertTrue( s["r"].isInstanceOf( Gaffer.DependencyNode.staticTypeId() ) )
+		self.assertTrue( isinstance( s["r"], Gaffer.SubGraph ) )
+		self.assertTrue( s["r"].isInstanceOf( Gaffer.SubGraph.staticTypeId() ) )
+		
+		# create a box with a promoted output:
+		s["b"] = Gaffer.Box()
+		s["b"]["n"] = GafferTest.AddNode()
+		s["b"].promotePlug( s["b"]["n"]["sum"], asUserPlug = False )
+		s["b"].exportForReference( "/tmp/test.grf" )
+		
+		# load onto reference:
+		s["r"].load( "/tmp/test.grf" )
+		self.assertEqual( s["r"].correspondingInput( s["r"]["n_sum"] ), None )
+		self.assertEqual( s["r"].enabledPlug(), None )
+		
+		# Wire it up to support enabledPlug() and correspondingInput()
+		s["b"].promotePlug( s["b"]["n"]["op1"], asUserPlug = False )
+		s["b"]["n"]["op2"].setValue( 10 )
+		s["b"].exportForReference( "/tmp/test.grf" )
+		
+		# reload reference and test:
+		s["r"].load( "/tmp/test.grf" )
+		self.assertEqual( s["r"].correspondingInput( s["r"]["n_sum"] ), None )
+		self.assertEqual( s["r"].enabledPlug(), None )
+		
+		# add an enabled plug:
+		s["b"]["enabled"] = Gaffer.BoolPlug( flags = Gaffer.Plug.Flags.Default | Gaffer.Plug.Flags.Dynamic )
+		s["b"].exportForReference( "/tmp/test.grf" )
+		
+		# reload reference and test that's now visible via enabledPlug():
+		s["r"].load( "/tmp/test.grf" )
+		self.assertEqual( s["r"].correspondingInput( s["r"]["n_sum"] ), None )
+		self.assertTrue( s["r"].enabledPlug().isSame( s["r"]["enabled"] ) )
+		
+		# hook up the enabled plug inside the box:
+		s["b"]["n"]["enabled"].setInput( s["b"]["enabled"] )
+		s["b"].exportForReference( "/tmp/test.grf" )
+
+		# reload reference and test that's now visible via enabledPlug():
+		s["r"].load( "/tmp/test.grf" )
+		self.assertTrue( s["r"].enabledPlug().isSame( s["r"]["enabled"] ) )
+		self.assertTrue( s["r"].correspondingInput( s["r"]["n_sum"] ).isSame( s["r"]["n_op1"] ) )
+		
+		
+		# Connect it into a network, delete it, and check that we get nice auto-reconnect behaviour
+		s["a"] = GafferTest.AddNode()
+		s["r"]["n_op1"].setInput( s["a"]["sum"] )
+
+		s["c"] = GafferTest.AddNode()
+		s["c"]["op1"].setInput( s["r"]["n_sum"] )
+
+		s.deleteNodes( filter = Gaffer.StandardSet( [ s["r"] ] ) )
+
+		self.assertTrue( s["c"]["op1"].getInput().isSame( s["a"]["sum"] ) )
+
+	def testPlugFlagsOnReload( self ):
+
+		s = Gaffer.ScriptNode()
+		s["b"] = Gaffer.Box()
+		s["b"]["s"] = GafferTest.SphereNode()
+		s["b"]["a"] = GafferTest.AddNode()
+
+		s["b"].exportForReference( "/tmp/test.grf" )
+
+		# import it into a script.
+
+		s2 = Gaffer.ScriptNode()
+		s2["r"] = Gaffer.Reference()
+		s2["r"].load( "/tmp/test.grf" )
+		s2["r"]["__pluggy"] = Gaffer.CompoundPlug( flags = Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		s2["r"]["__pluggy"]["int"] = Gaffer.IntPlug( flags = Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		s2["r"]["__pluggy"]["compound"] = Gaffer.CompoundPlug( flags = Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		s2["r"]["__pluggy"]["compound"]["int"] = Gaffer.IntPlug( flags = Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+
+		self.assertEqual( s2["r"]["__pluggy"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		self.assertEqual( s2["r"]["__pluggy"]["int"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		self.assertEqual( s2["r"]["__pluggy"]["compound"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		self.assertEqual( s2["r"]["__pluggy"]["compound"]["int"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+
+		s2["r"].load( "/tmp/test.grf" )
+
+		self.assertEqual( s2["r"]["__pluggy"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		self.assertEqual( s2["r"]["__pluggy"]["int"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		self.assertEqual( s2["r"]["__pluggy"]["compound"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
+		self.assertEqual( s2["r"]["__pluggy"]["compound"]["int"].getFlags(), Gaffer.Plug.Flags.Dynamic | Gaffer.Plug.Flags.Default )
 
 	def tearDown( self ) :
 

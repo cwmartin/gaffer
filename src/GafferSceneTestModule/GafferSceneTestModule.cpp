@@ -45,6 +45,7 @@
 #include "GafferSceneTest/TraverseScene.h"
 #include "GafferSceneTest/TestShader.h"
 #include "GafferSceneTest/TestLight.h"
+#include "GafferSceneTest/ScenePlugTest.h"
 
 using namespace boost::python;
 using namespace GafferSceneTest;
@@ -63,5 +64,6 @@ BOOST_PYTHON_MODULE( _GafferSceneTest )
 	GafferBindings::NodeClass<TestLight>();
 
 	def( "traverseScene", &traverseSceneWrapper );
+	def( "testManyStringToPathCalls", &testManyStringToPathCalls );
 
 }

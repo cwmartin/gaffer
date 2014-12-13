@@ -79,6 +79,10 @@ import DeleteGlobalsUI
 import DeleteOptionsUI
 import ExternalProceduralUI
 import ExecutableRenderUI
+import IsolateUI
+import SelectionToolUI
+import CropWindowToolUI
+import CameraUI
 
 # then all the PathPreviewWidgets. note that the order
 # of import controls the order of display.

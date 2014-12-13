@@ -51,6 +51,16 @@ Attributes::Attributes( const std::string &name )
 	storeIndexOfNextChild( g_firstPlugIndex );
 	addChild( new CompoundDataPlug( "attributes" ) );
 	addChild( new BoolPlug( "global", Plug::In, false ) );
+	
+	// Fast pass-throughs for the things we don't alter.
+	outPlug()->objectPlug()->setInput( inPlug()->objectPlug() );
+	outPlug()->transformPlug()->setInput( inPlug()->transformPlug() );
+	outPlug()->boundPlug()->setInput( inPlug()->boundPlug() );
+	// Disconnect globals pass-through the SceneElementProcessor made
+	// because we do modify the globals.
+	/// \todo Use plugInputChangedSignal() and plugSetSignal() to
+	/// keep the globals pass-through connected when possible?
+	outPlug()->globalsPlug()->setInput( NULL );
 }
 
 Attributes::~Attributes()
@@ -92,9 +102,8 @@ void Attributes::hashGlobals( const Gaffer::Context *context, const ScenePlug *p
 {
 	if( globalPlug()->getValue() )
 	{
-		// We will modify the globals. Bypass the SceneElementProcessor::hashGlobals()
-		// because it's a pass-through and we need to compute a proper hash instead.
-		FilteredSceneProcessor::hashGlobals( context, parent, h );
+		// We will modify the globals.
+		SceneElementProcessor::hashGlobals( context, parent, h );
 		inPlug()->globalsPlug()->hash( h );
 		attributesPlug()->hash( h );
 	}
@@ -114,7 +123,12 @@ IECore::ConstCompoundObjectPtr Attributes::computeGlobals( const Gaffer::Context
 	}
 
 	const CompoundDataPlug *p = attributesPlug();
-	IECore::CompoundObjectPtr result = inputGlobals->copy();
+	IECore::CompoundObjectPtr result = new CompoundObject;
+	// Since we're not going to modify any existing members (only add new ones),
+	// and our result becomes const on returning it, we can directly reference
+	// the input members in our result without copying. Be careful not to modify
+	// them though!
+	result->members() = inputGlobals->members();
 
 	std::string name;
 	for( CompoundDataPlug::MemberPlugIterator it( p ); it != it.end(); ++it )
@@ -158,7 +172,13 @@ IECore::ConstCompoundObjectPtr Attributes::computeProcessedAttributes( const Sce
 		return inputAttributes;
 	}
 
-	CompoundObjectPtr result = inputAttributes->copy();
+	CompoundObjectPtr result = new CompoundObject;
+	// Since we're not going to modify any existing members (only add new ones),
+	// and our result becomes const on returning it, we can directly reference
+	// the input members in our result without copying. Be careful not to modify
+	// them though!
+	result->members() = inputAttributes->members();
+
 	ap->fillCompoundObject( result->members() );
 
 	return result;

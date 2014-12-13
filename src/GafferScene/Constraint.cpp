@@ -34,8 +34,6 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include "boost/tokenizer.hpp"
-
 #include "Gaffer/Context.h"
 
 #include "GafferScene/Constraint.h"
@@ -56,6 +54,10 @@ Constraint::Constraint( const std::string &name )
 	addChild( new StringPlug( "target" ) );
 	addChild( new IntPlug( "targetMode", Plug::In, Origin, Origin, BoundCenter ) );
 	addChild( new V3fPlug( "targetOffset" ) );
+	
+	// Pass through things we don't want to modify
+	outPlug()->attributesPlug()->setInput( inPlug()->attributesPlug() );
+	outPlug()->objectPlug()->setInput( inPlug()->objectPlug() );
 }
 
 Constraint::~Constraint()
@@ -100,7 +102,9 @@ void Constraint::affects( const Gaffer::Plug *input, AffectedPlugsContainer &out
 		input == targetPlug() ||
 		input == targetModePlug() ||
 		input->parent<Plug>() == targetOffsetPlug() ||
-		affectsConstraint( input )
+		// TypeId comparison is necessary to avoid calling pure virtual
+		// if we're called before being fully constructed.
+		( typeId() != staticTypeId() && affectsConstraint( input ) )
 	)
 	{
 		outputs.push_back( outPlug()->transformPlug() );
@@ -178,12 +182,6 @@ Imath::M44f Constraint::computeProcessedTransform( const ScenePath &path, const 
 
 void Constraint::tokenizeTargetPath( ScenePath &path ) const
 {
-	/// \todo We really need a plug type which stores a path internally.
-	typedef boost::tokenizer<boost::char_separator<char> > Tokenizer;
 	std::string targetPathAsString = targetPlug()->getValue();
-	Tokenizer tokenizer( targetPathAsString, boost::char_separator<char>( "/" ) );
-	for( Tokenizer::const_iterator it = tokenizer.begin(), eIt = tokenizer.end(); it != eIt; it++ )
-	{
-		path.push_back( *it );
-	}
+	ScenePlug::stringToPath( targetPathAsString, path );
 }

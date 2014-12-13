@@ -36,6 +36,8 @@
 
 from SceneViewTest import SceneViewTest
 from ShaderAssignmentUITest import ShaderAssignmentUITest
+from StandardGraphLayoutTest import StandardGraphLayoutTest
+from SceneGadgetTest import SceneGadgetTest
 
 if __name__ == "__main__":
 	unittest.main()

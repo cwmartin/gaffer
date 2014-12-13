@@ -399,6 +399,61 @@ class RenderManRenderTest( GafferRenderManTest.RenderManTestCase ) :
 
 		dispatcher.dispatch( [ s["render"] ] )
 
+	def testCommand( self ) :
+
+		s = Gaffer.ScriptNode()
+
+		s["sphere"] = GafferScene.Sphere()
+
+		s["outputs"] = GafferScene.Outputs()
+		s["outputs"].addOutput(
+			"beauty",
+			IECore.Display(
+				"test",
+				"ieDisplay",
+				"rgba",
+				{
+					"quantize" : IECore.FloatVectorData( [ 0, 0, 0, 0 ] ),
+					"driverType" : "ClientDisplayDriver",
+					"displayHost" : "localhost",
+					"displayPort" : "1559",
+					"remoteDisplayType" : "GafferImage::GafferDisplayDriver",
+					"handle" : "myLovelyPlane",
+				}
+			)
+		)
+		s["outputs"]["in"].setInput( s["sphere"]["out"] )
+
+		s["display"] = GafferImage.Display()
+	
+		s["render"] = GafferRenderMan.RenderManRender()
+		s["render"]["ribFileName"].setValue( "/tmp/test.rib" )
+		s["render"]["in"].setInput( s["outputs"]["out"] )
+
+		s["fileName"].setValue( "/tmp/test.gfr" )
+		s.save()
+		
+		# render a full frame and get the data window
+		s["render"].execute()
+		dataWindow1 = s["display"]["out"].image().dataWindow
+
+		# specify a crop on the command line and get the new data window
+		s["render"]["command"].setValue( "renderdl -crop 0 0.5 0 0.5" )
+		s["render"].execute()
+
+		# check that the crop worked
+		dataWindow2 = s["display"]["out"].image().dataWindow
+		self.assertEqual( dataWindow2.size(), dataWindow1.size() / 2 )
+
+		# now check that we can specify values via the context too
+		s["render"]["command"].setValue( "renderdl -crop 0 ${size} 0 ${size}" )
+		s.context()["size"] = 0.25
+		with s.context() :
+			s["render"].execute()
+		
+		dataWindow3 = s["display"]["out"].image().dataWindow
+		self.assertEqual( dataWindow3.size(), dataWindow1.size() / 4 )
+		
 	def testOptions( self ) :
 
 		s = Gaffer.ScriptNode()
@@ -438,6 +493,49 @@ class RenderManRenderTest( GafferRenderManTest.RenderManTestCase ) :
 				s["r"].execute()
 				rib = "\n".join( file( "/tmp/test.rib" ).readlines() )
 				self.assertTrue( "FrameBegin %d" % i in rib )
+
+	def testMultipleCameras( self ) :
+
+		s = Gaffer.ScriptNode()
+
+		s["camera1"] = GafferScene.Camera()
+		s["camera1"]["name"].setValue( "camera1" )
+
+		s["camera2"] = GafferScene.Camera()
+		s["camera2"]["name"].setValue( "camera2" )
+
+		s["camera3"] = GafferScene.Camera()
+		s["camera3"]["name"].setValue( "camera3" )
+
+		s["group"] = GafferScene.Group()
+		s["group"]["in"].setInput( s["camera1"]["out"] )
+		s["group"]["in1"].setInput( s["camera2"]["out"] )
+		s["group"]["in2"].setInput( s["camera3"]["out"] )
+
+		s["options"] = GafferScene.StandardOptions()
+		s["options"]["in"].setInput( s["group"]["out"] )
+		s["options"]["options"]["renderCamera"]["enabled"].setValue( True )
+		s["options"]["options"]["renderCamera"]["value"].setValue( "/group/camera2" )
+
+		s["render"] = GafferRenderMan.RenderManRender()
+		s["render"]["in"].setInput( s["options"]["out"] )
+		s["render"]["mode"].setValue( "generate" )
+
+		s["render"]["ribFileName"].setValue( "/tmp/test.rib" )
+
+		s["fileName"].setValue( "/tmp/test.gfr" )
+		s.save()
+
+		s["render"].execute()
+
+		rib = "\n".join( file( "/tmp/test.rib" ).readlines() )
+
+		self.assertTrue( "Camera \"/group/camera1\"" in rib )
+		self.assertTrue( "Camera \"/group/camera2\"" in rib )
+		self.assertTrue( "Camera \"/group/camera3\"" in rib )
+		# camera3 must come last, because it is the primary render camera
+		self.assertTrue( rib.index( "Camera \"/group/camera2\"" ) > rib.index( "Camera \"/group/camera1\"" ) )
+		self.assertTrue( rib.index( "Camera \"/group/camera2\"" ) > rib.index( "Camera \"/group/camera3\"" ) )
 
 	def setUp( self ) :
 

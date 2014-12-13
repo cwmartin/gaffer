@@ -1,3 +1,237 @@
+#### UI
+
+- Fixed bug which prevented newly created nodes from being inserted inline in the Node Graph.
+- Added error display to string and numeric plug widgets - typically this is useful when a bad expression has been entered. Previously bad expressions would break the UI.
+- Optimised the 3d view significantly.
+- Fixed UI reordering bug in UIEditor (#847).
+- Added menu item for deleting CompoundDataPlugValueWidget children.
+
+#### Apps
+
+- Added ignoreScriptLoadErrors parameter to execute app.
+
+#### Core
+
+- LocalDispatcher now has an option to ignore errors when loading the script (#1084).
+
+#### Scene
+
+- Fixed Grid node GL shader assignment.
+- Fixed bug in Instancer dirty propagation.
+- Fixed SubTree set computation when root path omits the leading slash.
+- Added "isolate from" capability to GafferScene.Isolate node.
+
+#### API
+
+- Added support for invalid variants to GafferUI._Variant.fromVariant().
+- Added TextWidget setErrored()/getErrored() methods.
+- Added GafferSceneUI::SceneGadget class, for optimised display of scenes in OpenGL.
+- Removed bloat from SceneProcedural - this was being used previously to implement the viewer but is no longer needed.
+- Added ValuePlug::getValue() arguments for when hash is known.
+- Added TypedPlugClass helper to GafferBindings.
+- Improved exceptions thrown from ScriptNode::execute().
+- ScriptProcedural now ignores errors when loading the script.
+- Added PlugLayout.layoutOrder() static method.
+- Fixed deadlocks if computes spawn their own threads.
+- Added GafferScene::PathMatcher::prune() and isEmpty() methods.
+
+#### Incompatibilities
+
+- Added argument to ValuePlug::getObjectValue(), and associated derived class getValue() calls. Source compatibility is maintained, but binary compatibility is not.
+- View::setContext() is now virtual.
+
+#### Build
+
+- Requires Cortex 9.0.0-a10
+
+# 0.5.0.1
+
+#### Scene
+
+- Fixed signal threading bug in SceneProcedural which was causing sporadic crashes
+
+# 0.5.0.0
+
+#### Core
+
+- Fixed LocalDispatcher to quote command line arguments and ignore "ui:" prefixed context variables.
+- Avoiding shell subprocess for Local Jobs stats.
+- LocalDispatcher now just constructs a Job and lets it do the heavy lifting
+- Fixed bug where script context changes could leak into local background dispatches.
+- added python error catching to ConnectionBinding, to prevent crashes
+- Fixed serialization bug with extra plugs on references
+- Dispatcher::frameRange() is now public and virtual.
+
+#### UI
+
+- Menu widget: Added support for icons
+- Disabled Kill button when no jobs are selected.
+- Job details tab is scrollable and resizable.
+- Fixed context errors in teh scene inspector
+- Added button to remove failed jobs.
+- Preventing update error for deleted display node.
+- Adding support for icons in menus
+
+#### Image
+
+- Preventing OIIO error overflow crash
+
+# 0.4.0.0
+
+#### Core
+
+- Plugs and ValuePlugs now accept children (#1043).
+- Added child matching to connected Plugs (#1043).
+- Added LocalDispatcher.Job and LocalDispatcher.JobPool to track running batches (#1064).
+- Failing batches not stop a LocalDispatch job.
+
+#### UI
+
+- Improved Object section of SceneInspector (#897).
+- Added a window for tracking currently running LocalDispatcher jobs (#872).
+- Fixed reparenting bug with DispatcherWindows (#1064).
+
+#### Scene
+
+- Fixed poor performance of Prune/Isolate in presence of SetFilter.
+- Added sets support to Parent node (#1065).
+- Outputting all cameras, not just the primary camera, to the renderer.
+- Added support for per-camera resolution overrides, specified with a "resolutionOverride" V2iData in the camera parameters.
+
+#### API
+
+- Plugs and ValuePlugs now accept children. CompoundPlug will be deprecated.
+- Added BranchCreator::hashBranchGlobals() and computeBranchGlobals(), and implemented them for Parent.
+- Added outputCameras() and overload for outputCamera() to RendererAlgo.h.
+- Added LocalDispatcher.Job and LocalDispatcher.JobPool to track running batches.
+
+#### Incompatible changes
+
+- Added additional virtual methods to BranchCreator
+- ValuePlug::settable() is no longer virtual
+- Removed methods and member variable from CompoundPlug
+- InteractiveRender "updateCamera" plug renamed to "updateCameras".
+
+# 0.3.0.0
+
+#### Core
+
+- Added SubGraph base class, which Reference and Box now derive from, allowing them both to be enabled/disabled.
+- Redesigned Dispatcher registration (#922) (see API section for details).
+
+#### UI
+
+- Nodes created via the NodeMenu apply default values to their plugs, using the "userDefault" key in the Metadata (#1038).
+- Exposed the DispatcherWindow to the public API.
+
+#### Cortex
+
+- Moved Cortex-specific functionality into new GafferCortex library and module.
+	- The Gaffer core itself remains heavily dependent on Cortex, and always will. Here we're splitting out "end user" functionality such as OpHolders and ProceduralHolders, so that GafferCortex can be thought of as the user-visible presence of Cortex within Gaffer.
+	- This remains backwards compatible for now via startup files, which allows a grace period for dependent code to update to the new module layout.
+
+#### RenderMan
+
+- Added basic support for RenderMan volume shaders.
+
+#### API
+
+- Added Gaffer.NodeAlgo python scope with applyUserDefaults( node ) (#1038).
+- Redesigned Dispatcher registration (#922).
+	- Dispatchers are registered with Creator functions rather than instances.
+	- Added get/setDefaultDispatcherType(), which can be used to create a new instance of the default type.
+	- SetupPlugsFn is now a static function that can be registered along with a Creator, rather than a virtual method of Dispatcher instances.
+- Added gil release to GafferScene.matchingPaths python binding.
+- Fixed StringPlug string substitution bug.
+- Catching error_already_set in Dispatcher bindings.
+
+#### Incompatible changes
+
+- Reference and Box now derive from SubGraph rather than Node or DependencyNode.
+- Redesigned Dispatcher registration (#922) (see API section for details).
+
+# 0.2.1.0
+
+#### Core
+
+* Expression node optimizations
+
+#### Scene
+
+* Made ShaderAssignment use the shader type as an attribute name.
+* Added Group::nextInPlug() method
+* InteractiveRender now updates all attributes, not just shaders
+
+#### UI
+
+* Dispatcher FrameRange UI displays the value that will actually be dispatched.
+* Removed unwanted horizontal padding from frameless Buttons.
+
+# 0.2.0.0
+
+This release brings significant optimisations, further additions to the SceneInspector, and the usual collection of miscellaneous enhancements and bug fixes.
+
+#### Core
+
+- Optimised Context::substitute(). This gives a 73% reduction in runtime for a substitutions benchmark.
+- Added '\' as an escape character in Context::substitute() (#997).
+- Boxes may now be enabled/disabled and define pass-through behaviours (#1015).
+- Significant optimisations to the computation engine.
+- Added TaskList node for grouping the dispatch of several input requirements.
+
+#### Image
+
+- Fixed Display node for bucket sizes larger than the native tile size.
+- Fixed problems when running embedded in Maya.
+
+#### Scene
+
+- Added code to clear caches after full procedural expansion in batch renders.
+- Added scene pass-through to the InteractiveRender node. This allows it to be seen in the Viewer, SceneHierarchy, SceneInspector etc.
+- Significant optimisations. A benchmark scene can now be generated in 3% of its previous runtime.
+
+#### RenderMan
+
+- Added "command" plug to RenderManRender. This allows the user to customise the command used to render the RIB (#1017).
+
+#### UI
+
+- SceneInspector improvements
+	- Added set membership section (#930).
+	- Added sets section to globals (#895).
+	- Improved responsiveness.
+- MenuButton improvements
+	- Menus are shown on press rather than release (#742).
+	- Added menu indicator (#493).
+- Fixed OpDialogue bug which caused it to return to the parameters pane when it should have been displaying an error.
+- Dispatcher improvements
+	- Added PlaybackRange to the frames mode menu (#1007).
+	- Renamed ScriptRange to FullRange.
+
+#### API
+
+- Added custom Diff support to SceneInspector.
+- Fixed crashes when passing None to PathMatcher python methods.
+- Added accessors for the buttons on VectorDataWidget (#1003).
+- Fixed broken SceneInspector.Row.getAlternate() method.
+- Added SceneProcedural::allRenderedSignal().
+- Added Context::remove() method.
+
+#### Incompatible changes
+
+- SceneInspector API changes.
+- Box rederived from DependencyNode.
+- Dispatcher ScriptRange renamed to FullRange.
+
+#### Build
+
+- Improved Travis continuous integration setup
+	- Added running of unit tests
+	- Added GafferRenderMan support
+- Fixed installation to paths starting with "./"
+- Fixed RenderManShader compilation in Clang 3.4
+- GafferOSL compatibility for OSL version 1.5
+
 # 0.1.1.0
 
 #### Core

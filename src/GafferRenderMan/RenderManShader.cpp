@@ -52,6 +52,7 @@
 #include "Gaffer/SplinePlug.h"
 #include "Gaffer/ArrayPlug.h"
 #include "Gaffer/Box.h"
+#include "Gaffer/Dot.h"
 
 #include "GafferScene/ShaderSwitch.h"
 
@@ -127,7 +128,22 @@ void RenderManShader::loadShader( const std::string &shaderName, bool keepExisti
 	IECore::ConstShaderPtr shader = runTimeCast<const IECore::Shader>( shaderLoader()->read( shaderName + ".sdl" ) );
 	loadShaderParameters( shader.get(), parametersPlug(), keepExistingValues );
 	namePlug()->setValue( shaderName );
-	typePlug()->setValue( "ri:" + shader->getType() );
+
+	string type = "ri:" + shader->getType();
+	bool oldAndNewTypesCompatible = false;
+	if( type == "ri:volume" )
+	{
+		// "ri:volume" is the type of the shader, but it's not a valid assignment
+		// type. Valid assignment types are "ri:atmosphere", "ri:interior" and "ri:exterior".
+		type = "ri:atmosphere";
+		const string oldType = typePlug()->getValue();
+		oldAndNewTypesCompatible = oldType == "ri:atmosphere" || oldType == "ri:interior" || oldType == "ri:exterior";
+	}
+
+	if( !keepExistingValues || !oldAndNewTypesCompatible )
+	{
+		typePlug()->setValue( type );
+	}
 }
 
 bool RenderManShader::acceptsInput( const Plug *plug, const Plug *inputPlug ) const
@@ -149,8 +165,8 @@ bool RenderManShader::acceptsInput( const Plug *plug, const Plug *inputPlug ) co
 		if( plug->typeId() == Plug::staticTypeId() )
 		{
 			// coshader parameter - source must be another
-			// renderman shader hosting a coshader, or a box
-			// or shader switch with a currently dangling connection.
+			// renderman shader hosting a coshader, or a box,
+			// shader switch or dot with a currently dangling connection.
 			// in the latter cases, we will be called again when the
 			// box or switch is connected to something, so we can check
 			// that the indirect connection is to our liking.
@@ -158,7 +174,8 @@ bool RenderManShader::acceptsInput( const Plug *plug, const Plug *inputPlug ) co
 
 			if(
 				runTimeCast<const Box>( sourceNode ) ||
-				runTimeCast<const ShaderSwitch>( sourceNode )
+				runTimeCast<const ShaderSwitch>( sourceNode ) ||
+				runTimeCast<const Dot>( sourceNode )
 			)
 			{
 				return true;

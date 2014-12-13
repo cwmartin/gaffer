@@ -41,8 +41,10 @@ import traceback
 import IECore
 
 import Gaffer
+import GafferCortex
 import GafferScene
 import GafferUI
+import GafferCortexUI
 import GafferSceneUI
 
 # ScriptWindow menu
@@ -55,6 +57,7 @@ GafferUI.FileMenu.appendDefinitions( scriptWindowMenu, prefix="/File" )
 GafferUI.EditMenu.appendDefinitions( scriptWindowMenu, prefix="/Edit" )
 GafferUI.LayoutMenu.appendDefinitions( scriptWindowMenu, name="/Layout" )
 GafferUI.DispatcherUI.appendMenuDefinitions( scriptWindowMenu, prefix="/Execute" )
+GafferUI.LocalDispatcherUI.appendMenuDefinitions( scriptWindowMenu, prefix="/Execute" )
 
 # Add help menu
 def launchGoogleGroup( menu ):
@@ -154,6 +157,55 @@ if "DELIGHT" in os.environ :
 
 		stacktrace = traceback.format_exc()
 		IECore.msg( IECore.Msg.Level.Error, "startup/gui/menus.py", "Error loading RenderMan module - \"%s\".\n %s" % ( m, stacktrace ) )
+
+# appleseed nodes
+
+if "APPLESEED" in os.environ :
+
+	try :
+
+		import GafferAppleseed
+		import GafferAppleseedUI
+		import GafferOSL
+		import GafferOSLUI
+
+		def __shaderNodeCreator( nodeName, shaderName ) :
+
+			node = GafferOSL.OSLShader( nodeName )
+			node.loadShader( shaderName )
+
+			return node
+
+		GafferSceneUI.ShaderUI.appendShaders(
+			nodeMenu.definition(), "/Appleseed/Shader",
+			os.environ["APPLESEED_SEARCHPATH"].split( ":" ),
+			[ "oso" ],
+			__shaderNodeCreator
+		)
+
+		GafferAppleseedUI.LightMenu.appendLights( nodeMenu.definition() )
+
+		nodeMenu.append( "/Appleseed/Attributes", GafferAppleseed.AppleseedAttributes, searchText = "AppleseedAttributes" )
+		nodeMenu.append( "/Appleseed/Options", GafferAppleseed.AppleseedOptions, searchText = "AppleseedOptions" )
+		nodeMenu.append(
+			"/Appleseed/Render", GafferAppleseed.AppleseedRender,
+			plugValues = {
+				"fileName" : "${project:rootDirectory}/appleseeds/${script:name}/${script:name}.####.appleseed",
+			},
+			searchText = "AppleseedRender"
+		)
+
+		scriptWindowMenu.append(
+			"/Help/Appleseed/User Docs",
+			{
+				"command" : IECore.curry( GafferUI.showURL, "https://github.com/appleseedhq/appleseed/wiki" ),
+			}
+		)
+
+	except Exception, m :
+
+		stacktrace = traceback.format_exc()
+		IECore.msg( IECore.Msg.Level.Error, "startup/gui/menus.py", "Error loading Appleseed module - \"%s\".\n %s" % ( m, stacktrace ) )
 
 # Scene nodes
 
@@ -264,12 +316,17 @@ if moduleSearchPath.find( "GafferOSL" ) :
 
 # Cortex nodes
 
-nodeMenu.append( "/Cortex/File/Reader", Gaffer.ObjectReader, searchText = "ObjectReader" )
-nodeMenu.append( "/Cortex/File/Writer", Gaffer.ObjectWriter, searchText = "ObjectWriter" )
+nodeMenu.append( "/Cortex/File/Reader", GafferCortex.ObjectReader, searchText = "ObjectReader" )
+nodeMenu.append( "/Cortex/File/Writer", GafferCortex.ObjectWriter, searchText = "ObjectWriter" )
 
 # \todo have a method for dynamically choosing between Gaffer.OpHolder and Gaffer.ExecutableOpHolder
-nodeMenu.appendParameterisedHolders( "/Cortex/Ops", Gaffer.OpHolder, "IECORE_OP_PATHS" )
-nodeMenu.appendParameterisedHolders( "/Cortex/Procedurals", Gaffer.ProceduralHolder, "IECORE_PROCEDURAL_PATHS" )
+GafferCortexUI.ParameterisedHolderUI.appendParameterisedHolders(
+	nodeMenu.definition(), "/Cortex/Ops", "IECORE_OP_PATHS", GafferCortex.OpHolder
+)
+
+GafferCortexUI.ParameterisedHolderUI.appendParameterisedHolders(
+	nodeMenu.definition(), "/Cortex/Procedurals", "IECORE_PROCEDURAL_PATHS", GafferCortex.ProceduralHolder
+)
 
 # Utility nodes
 
@@ -279,4 +336,19 @@ nodeMenu.append( "/Utility/Random", Gaffer.Random )
 nodeMenu.append( "/Utility/Box", GafferUI.BoxUI.nodeMenuCreateCommand )
 nodeMenu.append( "/Utility/Reference", GafferUI.ReferenceUI.nodeMenuCreateCommand )
 nodeMenu.definition().append( "/Utility/Backdrop", { "command" : GafferUI.BackdropUI.nodeMenuCreateCommand } )
+nodeMenu.append( "/Utility/Dot", Gaffer.Dot )
 nodeMenu.append( "/Utility/System Command", Gaffer.SystemCommand, searchText = "SystemCommand" )
+nodeMenu.append( "/Utility/Task List", Gaffer.TaskList, searchText = "TaskList" )
+
+# appleseed uses GafferOSL shaders so  we need to 
+# add the paths to them to OSL_SHADER_PATHS environment var.
+# this has to happen after GafferOSL is initialized otherwise 
+# appleseed shaders also show on the OSL menu.
+if "APPLESEED" in os.environ :
+
+	os.environ["OSL_SHADER_PATHS"] = os.environ["APPLESEED_SEARCHPATH"] + ":" + os.environ["OSL_SHADER_PATHS"]
+
+## Miscellaneous UI
+###########################################################################
+
+GafferUI.DotUI.connect( application.root() )

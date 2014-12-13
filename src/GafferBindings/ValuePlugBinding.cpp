@@ -38,10 +38,6 @@
 #include "boost/python.hpp"
 #include "boost/format.hpp"
 
-#include "IECore/MurmurHash.h"
-#include "IECorePython/Wrapper.h"
-#include "IECorePython/RunTimeTypedBinding.h"
-
 #include "Gaffer/ValuePlug.h"
 #include "Gaffer/Node.h"
 #include "Gaffer/Reference.h"
@@ -81,6 +77,28 @@ static std::string maskedRepr( const Plug *plug, unsigned flagsMask )
 					boost::format( "Default value for plug \"%s\" cannot be serialised" ) % plug->fullName()
 				)
 			);
+		}
+	}
+
+	if( PyObject_HasAttrString( pythonPlug.ptr(), "hasMinValue" ) )
+	{
+		const bool hasMinValue = pythonPlug.attr( "hasMinValue" )();
+		if( hasMinValue )
+		{
+			object pythonMinValue = pythonPlug.attr( "minValue" )();
+			std::string minValue = extract<std::string>( pythonMinValue.attr( "__repr__" )() );
+			result += "minValue = " + minValue + ", ";
+		}
+	}
+
+	if( PyObject_HasAttrString( pythonPlug.ptr(), "hasMaxValue" ) )
+	{
+		const bool hasMinValue = pythonPlug.attr( "hasMaxValue" )();
+		if( hasMinValue )
+		{
+			object pythonMinValue = pythonPlug.attr( "maxValue" )();
+			std::string minValue = extract<std::string>( pythonMinValue.attr( "__repr__" )() );
+			result += "maxValue = " + minValue + ", ";
 		}
 	}
 
@@ -198,6 +216,14 @@ bool ValuePlugSerialiser::valueNeedsSerialisation( const Gaffer::ValuePlug *plug
 void GafferBindings::bindValuePlug()
 {
 	PlugClass<ValuePlug>()
+		.def( boost::python::init<const std::string &, Plug::Direction, unsigned>(
+				(
+					boost::python::arg_( "name" ) = GraphComponent::defaultName<ValuePlug>(),
+					boost::python::arg_( "direction" ) = Plug::In,
+					boost::python::arg_( "flags" ) = Plug::Default
+				)
+			)
+		)
 		.def( "settable", &ValuePlug::settable )
 		.def( "setFrom", &ValuePlug::setFrom )
 		.def( "setToDefault", &ValuePlug::setToDefault )

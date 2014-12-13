@@ -35,10 +35,6 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include <set>
-
-#include "boost/tokenizer.hpp"
-
 #include "Gaffer/Context.h"
 
 #include "GafferScene/SubTree.h"
@@ -232,9 +228,15 @@ IECore::ConstCompoundObjectPtr SubTree::computeGlobals( const Gaffer::Context *c
 	outputGlobals->members()["gaffer:sets"] = outputSets;
 
 	std::string root = rootPlug()->getValue();
+	
+	// append/prepend slashes if required:
 	if( !root.size() || root[root.size()-1] != '/' )
 	{
 		root += "/";
+	}
+	if( root[0] != '/' )
+	{
+		root = "/" + root;
 	}
 
 	size_t prefixSize = root.size() - 1; // number of characters to remove from front of each declaration
@@ -273,15 +275,10 @@ IECore::ConstCompoundObjectPtr SubTree::computeGlobals( const Gaffer::Context *c
 
 SceneNode::ScenePath SubTree::sourcePath( const ScenePath &outputPath, bool &createRoot ) const
 {
-	typedef boost::tokenizer<boost::char_separator<char> > Tokenizer;
 	/// \todo We should introduce a plug type which stores its values as a ScenePath directly.
 	string rootAsString = rootPlug()->getValue();
-	Tokenizer rootTokenizer( rootAsString, boost::char_separator<char>( "/" ) );
 	ScenePath result;
-	for( Tokenizer::const_iterator it = rootTokenizer.begin(), eIt = rootTokenizer.end(); it != eIt; it++ )
-	{
-		result.push_back( *it );
-	}
+	ScenePlug::stringToPath( rootAsString, result );
 
 	createRoot = false;
 	if( result.size() && includeRootPlug()->getValue() )

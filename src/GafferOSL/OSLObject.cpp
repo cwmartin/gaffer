@@ -35,6 +35,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "Gaffer/Box.h"
+#include "Gaffer/Dot.h"
 
 #include "GafferScene/ShaderSwitch.h"
 
@@ -57,6 +58,10 @@ OSLObject::OSLObject( const std::string &name )
 {
 	storeIndexOfNextChild( g_firstPlugIndex );
 	addChild( new Plug( "shader" ) );
+
+	// Pass-throughs for things we don't want to modify
+	outPlug()->attributesPlug()->setInput( inPlug()->attributesPlug() );
+	outPlug()->transformPlug()->setInput( inPlug()->transformPlug() );
 }
 
 OSLObject::~OSLObject()
@@ -109,10 +114,11 @@ bool OSLObject::acceptsInput( const Gaffer::Plug *plug, const Gaffer::Plug *inpu
 		else
 		{
 			// as for the GafferScene::ShaderAssignment, we accept Box and ShaderSwitch
-			// inputs as an indirect means of later getting a connection to a Shader.
+			// and Dot inputs as an indirect means of later getting a connection to a Shader.
 			if(
 				runTimeCast<const Gaffer::Box>( sourceNode ) ||
-				runTimeCast<const ShaderSwitch>( sourceNode )
+				runTimeCast<const ShaderSwitch>( sourceNode ) ||
+				runTimeCast<const Dot>( sourceNode )
 			)
 			{
 				return true;
