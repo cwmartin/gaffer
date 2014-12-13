@@ -84,7 +84,7 @@ options.Add(
 options.Add(
 	"CXXFLAGS",
 	"The extra flags to pass to the C++ compiler during compilation.",
-	[ "-pipe", "-Wall", "-Werror", "-O3", "-DNDEBUG", "-DBOOST_DISABLE_ASSERTS" ]
+	[ "-pipe", "-Wall", "-Werror", "-O3", "-DNDEBUG", "-DBOOST_DISABLE_ASSERTS", "-DBOOST_SIGNALS_NO_DEPRECATION_WARNING" ]
 )
 
 options.Add(
@@ -117,6 +117,8 @@ options.Add(
 	"DEPENDENCIES_INSTALL_DIR",
 	"The destination directory for a separate installation of only the dependencies.",
 	"./install/gafferDependencies-${GAFFER_MILESTONE_VERSION}.${GAFFER_MAJOR_VERSION}.${GAFFER_MINOR_VERSION}.${GAFFER_PATCH_VERSION}-${GAFFER_PLATFORM}",
+	#"/home/christopher/dev/gafferDependencies/gafferDependencies-${GAFFER_MILESTONE_VERSION}.${GAFFER_MAJOR_VERSION}.${GAFFER_MINOR_VERSION}.${GAFFER_PATCH_VERSION}-${GAFFER_PLATFORM}",
+	#"/home/christopher/dev/gafferDependencies/gafferDependencies-0.1.1.0-linux",
 )
 
 options.Add(
@@ -133,7 +135,7 @@ options.Add(
 )
 
 options.Add(
-	BoolVariable( "BUILD_DEPENDENCIES", "Set this to build all the library dependencies gaffer has.", False )
+	BoolVariable( "BUILD_DEPENDENCIES", "Set this to build all the library dependencies gaffer has.", True )
 )
 
 # variables related to building all the dependencies for gaffer. these are mutually exclusive
@@ -146,6 +148,7 @@ options.Add(
 	"DEPENDENCIES_SRC_DIR",
 	"The location of a directory holding dependencies.",
 	"/home/christopher/dev/github/gafferDependencies",
+	#"/home/christopher/dev/gafferDependencies/gafferDependencies-0.1.1.0-linux",
 )
 
 options.Add(
@@ -166,6 +169,7 @@ options.Add(
 	"BOOST_SRC_DIR",
 	"The location of the boost source to be used if BUILD_DEPENDENCY_BOOST is specified.",
 	"$DEPENDENCIES_SRC_DIR/boost_1_51_0",
+	#"/home/christopher/dev/github/boost",
 )
 
 options.Add(
@@ -508,13 +512,16 @@ options.Add(
 env = Environment(
 
 	options = options,
-
 	GAFFER_MILESTONE_VERSION = str( gafferMilestoneVersion ),
 	GAFFER_MAJOR_VERSION = str( gafferMajorVersion ),
 	GAFFER_MINOR_VERSION = str( gafferMinorVersion ),
 	GAFFER_PATCH_VERSION = str( gafferPatchVersion ),
 
 )
+
+env["CXX"] = 'g++412'
+env["CC"] = 'gcc412'
+env["PATH"] = "/opt/gcc412/bin:" + os.environ["PATH"]
 
 for e in env["ENV_VARS_TO_IMPORT"].split() :
 	if e in os.environ :
@@ -535,6 +542,7 @@ elif env["PLATFORM"] == "posix" :
 		gccVersion = subprocess.Popen( [ env["CXX"], "-dumpversion" ], env=env["ENV"], stdout=subprocess.PIPE ).stdout.read().strip()
 		if gccVersion == "4.1.2" :
 			env.Append( CXXFLAGS = [ "-fno-strict-aliasing" ] )
+
 
 	env["GAFFER_PLATFORM"] = "linux"
 
@@ -565,28 +573,27 @@ if buildingDependencies and locatingDependencies :
 
 depEnv = env.Clone()
 
-# depEnv['BUILD_DEPENDENCY_PYTHON']	= False
-# depEnv['BUILD_DEPENDENCY_BOOST'] 	= False
-# depEnv['BUILD_DEPENDENCY_JPEG'] 	= False
-# depEnv['BUILD_DEPENDENCY_TIFF'] 	= False
-# depEnv['BUILD_DEPENDENCY_PNG'] 		= False
-# depEnv['BUILD_DEPENDENCY_FREETYPE'] = False
-# depEnv['BUILD_DEPENDENCY_TBB'] 		= False
-# depEnv['BUILD_DEPENDENCY_OPENEXR'] 	= False
-# depEnv['BUILD_DEPENDENCY_FONTS'] 	= False
-# depEnv['BUILD_DEPENDENCY_GLEW'] 	= False
-# depEnv['BUILD_DEPENDENCY_OCIO'] 	= False
-# depEnv['BUILD_DEPENDENCY_OIIO'] 	= False
-# depEnv['BUILD_DEPENDENCY_LLVM'] 	= False
-# depEnv['BUILD_DEPENDENCY_OSL'] 		= False
-# depEnv['BUILD_DEPENDENCY_HDF5'] 	= False
-# depEnv['BUILD_DEPENDENCY_ALEMBIC'] 	= False
-# depEnv['BUILD_DEPENDENCY_CORTEX'] 	= False
-
-# depEnv['BUILD_DEPENDENCY_GL'] 		= False
-# depEnv['BUILD_DEPENDENCY_QT'] 		= False
-# depEnv['BUILD_DEPENDENCY_PYQT'] 	= False
-# depEnv['BUILD_DEPENDENCY_PYSIDE'] 	= False
+depEnv['BUILD_DEPENDENCY_PYTHON']	= False
+depEnv['BUILD_DEPENDENCY_BOOST'] 	= True
+depEnv['BUILD_DEPENDENCY_JPEG'] 	= False
+depEnv['BUILD_DEPENDENCY_TIFF'] 	= False
+depEnv['BUILD_DEPENDENCY_PNG'] 		= False
+depEnv['BUILD_DEPENDENCY_FREETYPE'] = False
+depEnv['BUILD_DEPENDENCY_TBB'] 		= False
+depEnv['BUILD_DEPENDENCY_OPENEXR'] 	= False
+depEnv['BUILD_DEPENDENCY_FONTS'] 	= False
+depEnv['BUILD_DEPENDENCY_GLEW'] 	= False
+depEnv['BUILD_DEPENDENCY_OCIO'] 	= False
+depEnv['BUILD_DEPENDENCY_OIIO'] 	= False
+depEnv['BUILD_DEPENDENCY_LLVM'] 	= False
+depEnv['BUILD_DEPENDENCY_OSL'] 		= False
+depEnv['BUILD_DEPENDENCY_HDF5'] 	= False
+depEnv['BUILD_DEPENDENCY_ALEMBIC'] 	= False
+depEnv['BUILD_DEPENDENCY_CORTEX'] 	= False
+depEnv['BUILD_DEPENDENCY_GL'] 		= False
+depEnv['BUILD_DEPENDENCY_QT'] 		= False
+depEnv['BUILD_DEPENDENCY_PYQT'] 	= False
+depEnv['BUILD_DEPENDENCY_PYSIDE'] 	= False
 
 
 depEnv["ENV"].update(
@@ -632,7 +639,7 @@ depEnv["PYTHON_VERSION"] = pythonVersion
 env["PYTHON_VERSION"] = pythonVersion
 
 if depEnv["BUILD_DEPENDENCY_BOOST"] :
-	runCommand( "cd $BOOST_SRC_DIR; ./bootstrap.sh --prefix=$BUILD_DIR --with-python=$BUILD_DIR/bin/python --with-python-root=$BUILD_DIR && ./bjam -d+2 variant=release link=shared threading=multi install" )
+	runCommand( "cd $BOOST_SRC_DIR; ./bootstrap.sh --prefix=$BUILD_DIR --with-python=$BUILD_DIR/bin/python --with-python-root=$BUILD_DIR && ./bjam --toolset=gcc-4.1.2 -d+2 variant=release link=shared threading=multi install" )
 
 if depEnv["BUILD_DEPENDENCY_JPEG"] :
 	runCommand( "cd $JPEG_SRC_DIR && ./configure --prefix=$BUILD_DIR && make clean && make && make install" )
